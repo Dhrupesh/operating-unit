@@ -48,14 +48,23 @@ class AccountCutoff(models.Model):
         # add counter-part
         for key, value in key_ou.items():
             counterpart_amount = value * -1
-            movelines_to_create.append((0, 0, {
+
+            try:
+                movelines_to_create.append((0, 0, {
+                    'account_id': self.cutoff_account_id.id,
+                    'name': move_label,
+                    'debit': counterpart_amount < 0 and counterpart_amount * -1 or 0,
+                    'credit': counterpart_amount >= 0 and counterpart_amount or 0,
+                    'analytic_account_id': False,
+                    'operating_unit_id': int(key)
+                }))
+            except:
+                movelines_to_create.append((0, 0, {
                 'account_id': self.cutoff_account_id.id,
                 'name': move_label,
                 'debit': counterpart_amount < 0 and counterpart_amount * -1 or 0,
                 'credit': counterpart_amount >= 0 and counterpart_amount or 0,
-                'analytic_account_id': False,
-                'operating_unit_id': int(key)
-            }))
+                'analytic_account_id': False,}))
 
         res = {
             'journal_id': self.cutoff_journal_id.id,
@@ -92,7 +101,10 @@ class AccountCutoff(models.Model):
             res['operating_unit_id'] = cutoff_tax_line.operating_unit_id.id
         return res
 
-
+    def _prepare_prepaid_lines(self, aml, mapping):
+        res = super(AccountCutoff, self)._prepare_prepaid_lines(aml, mapping)
+        res['operating_unit_id'] = aml.operating_unit_id.id
+        return res
 
 class AccountCutoffLine(models.Model):
     _inherit = 'account.cutoff.line'
